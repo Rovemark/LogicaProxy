@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LogicaProxy Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%238b5cf6'/><text x='16' y='22' text-anchor='middle' fill='white' font-family='system-ui' font-weight='700' font-size='16'>LP</text></svg>">
+<style>
+  :root {
+    --bg: #09090b; --surface: #0f0f12; --card: #18181b; --card-hover: #1f1f23;
+    --border: #27272a; --text: #fafafa; --muted: #71717a; --dim: #52525b;
+    --accent: #8b5cf6; --accent-dim: rgba(139,92,246,0.1); --accent-border: rgba(139,92,246,0.2);
+    --green: #22c55e; --green-dim: rgba(34,197,94,0.1); --green-border: rgba(34,197,94,0.2);
+    --red: #ef4444; --red-dim: rgba(239,68,68,0.1); --red-border: rgba(239,68,68,0.2);
+    --yellow: #eab308; --yellow-dim: rgba(234,179,8,0.1);
+    --blue: #3b82f6; --blue-dim: rgba(59,130,246,0.1); --blue-border: rgba(59,130,246,0.2);
+    --cyan: #06b6d4; --cyan-dim: rgba(6,182,212,0.1);
+  }
+  html[data-theme="light"] {
+    --bg: #fafafa; --surface: #f4f4f5; --card: #ffffff; --card-hover: #f9f9fb;
+    --border: #e4e4e7; --text: #09090b; --muted: #71717a; --dim: #a1a1aa;
+    --accent-dim: rgba(139,92,246,0.08); --green-dim: rgba(34,197,94,0.08);
+    --red-dim: rgba(239,68,68,0.08); --blue-dim: rgba(59,130,246,0.08);
+    --cyan-dim: rgba(6,182,212,0.08);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .fade-in { animation: fadeIn 0.4s ease-out both; }
+  .fade-in-1 { animation-delay: 0.05s; } .fade-in-2 { animation-delay: 0.1s; }
+  .fade-in-3 { animation-delay: 0.15s; } .fade-in-4 { animation-delay: 0.2s; }
+  .fade-in-5 { animation-delay: 0.25s; } .fade-in-6 { animation-delay: 0.3s; }
+
+  /* Header */
+  .header { padding: 16px 0; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .header-inner { display: flex; align-items: center; gap: 12px; }
+  .logo { width: 34px; height: 34px; background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; color: #fff; box-shadow: 0 2px 8px rgba(139,92,246,0.3); }
+  .header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.03em; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .badge { font-size: 10px; padding: 3px 10px; border-radius: 20px; font-weight: 600; border: 1px solid; }
+  .badge-version { background: var(--accent-dim); color: var(--accent); border-color: var(--accent-border); }
+  .badge-online { background: var(--green-dim); color: var(--green); border-color: var(--green-border); }
+  .badge-offline { background: var(--red-dim); color: var(--red); border-color: var(--red-border); }
+  .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+  .theme-btn { background: var(--card); border: 1px solid var(--border); border-radius: 8px; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; transition: all 0.15s; }
+  .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Stats */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  @media (max-width: 768px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; position: relative; overflow: hidden; }
+  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; margin-bottom: 8px; }
+  .stat-value { font-size: 28px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+  .stat-sub { font-size: 10px; color: var(--dim); margin-top: 6px; font-weight: 500; }
+  .sparkline { position: absolute; bottom: 0; right: 0; width: 80px; height: 32px; opacity: 0.4; }
+  .sparkline path { fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Section */
+  .section { margin-bottom: 20px; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .section-title { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+  .section-action { font-size: 11px; color: var(--accent); cursor: pointer; font-weight: 500; }
+  .section-action:hover { text-decoration: underline; }
+
+  /* Providers */
+  .providers { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
+  .provider { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; transition: all 0.15s; cursor: default; }
+  .provider:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .provider-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .provider-name { font-size: 12px; font-weight: 700; }
+  .provider-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .dot-active { background: var(--green); box-shadow: 0 0 6px rgba(34,197,94,0.4); }
+  .dot-inactive { background: var(--dim); }
+  .provider-sub { font-size: 10px; color: var(--dim); }
+
+  /* Models */
+  .models-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .model-tag { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: 10px; font-family: 'SF Mono', monospace; color: var(--muted); transition: all 0.15s; }
+  .model-tag:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Table */
+  .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th { padding: 8px 14px; text-align: left; font-size: 9px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  td { padding: 8px 14px; font-size: 12px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--card-hover); }
+  .mono { font-family: 'SF Mono', 'JetBrains Mono', Monaco, monospace; font-size: 11px; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 9px; font-weight: 700; letter-spacing: 0.3px; }
+  .tag-get { background: var(--blue-dim); color: var(--blue); }
+  .tag-post { background: var(--green-dim); color: var(--green); }
+  .tag-error { background: var(--red-dim); color: var(--red); }
+  .tag-ws { background: var(--cyan-dim); color: var(--cyan); }
+
+  /* Chart */
+  .chart-area { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; height: 180px; display: flex; align-items: flex-end; gap: 2px; position: relative; }
+  .chart-bar { border-radius: 3px 3px 0 0; min-width: 6px; flex: 1; transition: height 0.4s ease; cursor: pointer; position: relative; }
+  .chart-bar:hover { filter: brightness(1.3); }
+  .chart-tooltip { display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 3px 8px; border-radius: 4px; font-size: 10px; white-space: nowrap; pointer-events: none; margin-bottom: 4px; font-weight: 600; }
+  .chart-bar:hover .chart-tooltip { display: block; }
+
+  /* Request Log */
+  .log-entry { display: flex; align-items: center; gap: 10px; padding: 6px 14px; font-size: 11px; border-bottom: 1px solid var(--border); }
+  .log-entry:last-child { border-bottom: none; }
+  .log-time { color: var(--dim); font-family: monospace; font-size: 10px; width: 65px; flex-shrink: 0; }
+  .log-method { width: 50px; flex-shrink: 0; }
+  .log-path { font-family: monospace; font-size: 10px; color: var(--muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .log-latency { font-family: monospace; font-size: 10px; color: var(--dim); width: 55px; text-align: right; flex-shrink: 0; }
+  .log-status { width: 30px; text-align: center; flex-shrink: 0; font-size: 10px; font-weight: 700; }
+  .log-status.ok { color: var(--green); }
+  .log-status.err { color: var(--red); }
+
+  /* Connection Test */
+  .test-btn { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+  .test-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+  .test-btn:active { transform: translateY(0); }
+  .test-result { font-size: 11px; color: var(--muted); margin-left: 12px; font-weight: 500; }
+
+  /* Layout */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+  @media (max-width: 900px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  /* Footer */
+  .footer { padding: 16px 0; text-align: center; color: var(--dim); font-size: 10px; border-top: 1px solid var(--border); margin-top: 20px; }
+  .footer a { color: var(--muted); text-decoration: none; font-weight: 600; }
+  .footer a:hover { color: var(--accent); }
+
+  /* Error */
+  #error-banner { display: none; background: var(--red-dim); border: 1px solid var(--red-border); color: var(--red); padding: 10px 20px; font-size: 11px; border-radius: 10px; margin-bottom: 16px; font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="container">
+<div id="error-banner"></div>
+
+<!-- Header -->
+<div class="header fade-in">
+  <div class="header-inner">
+    <div class="logo">LP</div>
+    <h1>LogicaProxy</h1>
+    <div class="header-right">
+      <span class="badge badge-version" id="version">...</span>
+      <div class="live-dot" id="live-dot"></div>
+      <span class="badge badge-online" id="status-badge" style="display:flex;align-items:center;gap:4px"><span id="status-text">Connecting</span></span>
+      <button class="theme-btn" id="theme-toggle" title="Toggle theme">&#9790;</button>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats">
+  <div class="stat fade-in fade-in-1">
+    <div class="stat-label">Uptime</div>
+    <div class="stat-value" id="uptime-value">--</div>
+    <div class="stat-sub" id="uptime-since">starting</div>
+    <svg class="sparkline" id="spark-uptime" viewBox="0 0 80 32"><path d="" stroke="var(--green)" /></svg>
+  </div>
+  <div class="stat fade-in fade-in-2">
+    <div class="stat-label">Requests</div>
+    <div class="stat-value" id="total-requests">0</div>
+    <div class="stat-sub" id="req-rate">0 req/s</div>
+    <svg class="sparkline" id="spark-reqs" viewBox="0 0 80 32"><path d="" stroke="var(--accent)" /></svg>
+  </div>
+  <div class="stat fade-in fade-in-3">
+    <div class="stat-label">Error Rate</div>
+    <div class="stat-value" id="error-rate">0%</div>
+    <div class="stat-sub" id="total-errors">0 errors</div>
+    <svg class="sparkline" id="spark-errors" viewBox="0 0 80 32"><path d="" stroke="var(--red)" /></svg>
+  </div>
+  <div class="stat fade-in fade-in-4">
+    <div class="stat-label">Avg Latency</div>
+    <div class="stat-value" id="avg-latency">--</div>
+    <div class="stat-sub" id="latency-sub">all endpoints</div>
+    <svg class="sparkline" id="spark-latency" viewBox="0 0 80 32"><path d="" stroke="var(--blue)" /></svg>
+  </div>
+</div>
+
+<!-- Row: Providers + Chart -->
+<div class="grid-2 fade-in fade-in-3">
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Providers</div>
+      <div class="section-action" id="provider-count">6 available</div>
+    </div>
+    <div class="providers" id="providers-grid">
+      <div class="provider"><div class="provider-top"><span class="provider-name">Claude</span><span class="provider-dot dot-active"></span></div><div class="provider-sub">Anthropic OAuth</div></div>
+      <div class="provider"><div class="provider-top"><span class="provider-name">Gemini</span><span class="provider-dot dot-active"></span></div><div class="provider-sub">Google OAuth</div></div>
+      <div class="provider"><div class="provider-top"><span class="provider-name">Codex</span><span class="provider-dot dot-active"></span></div><div class="provider-sub">OpenAI OAuth</div></div>
+      <div class="provider"><div class="provider-top"><span class="provider-name">Qwen</span><span class="provider-dot dot-active"></span></div><div class="provider-sub">Alibaba OAuth</div></div>
+      <div class="provider"><div class="provider-top"><span class="provider-name">iFlow</span><span class="provider-dot dot-active"></span></div><div class="provider-sub">iFlow OAuth</div></div>
+      <div class="provider"><div class="provider-top"><span class="provider-name">Antigravity</span><span class="provider-dot dot-active"></span></div><div class="provider-sub">AG OAuth</div></div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Request Volume</div>
+      <div style="font-size:10px;color:var(--dim)" id="chart-label">last 30 intervals</div>
+    </div>
+    <div class="chart-area" id="chart"></div>
+  </div>
+</div>
+
+<!-- Row: Models + Connection Test -->
+<div class="grid-3 fade-in fade-in-4">
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Available Models</div>
+      <div class="section-action" id="model-count">loading...</div>
+    </div>
+    <div class="models-grid" id="models-list"><span style="color:var(--dim);font-size:11px">Fetching models...</span></div>
+  </div>
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Connection Test</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+      <button class="test-btn" id="test-btn">Test Latency</button>
+      <div class="test-result" id="test-result"></div>
+      <div style="margin-top:12px;font-size:10px;color:var(--dim)" id="test-history"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Endpoints Table -->
+<div class="section fade-in fade-in-5">
+  <div class="section-header">
+    <div class="section-title">Live Endpoints</div>
+    <div style="font-size:10px;color:var(--dim)">sorted by requests</div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Method</th><th>Path</th><th style="text-align:right">Requests</th><th style="text-align:right">Errors</th><th style="text-align:right">Latency</th></tr></thead>
+      <tbody id="endpoints-body"><tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px;font-size:11px">Waiting for requests...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Request Log -->
+<div class="section fade-in fade-in-5">
+  <div class="section-header">
+    <div class="section-title">Recent Requests</div>
+    <div style="font-size:10px;color:var(--dim)">last 10</div>
+  </div>
+  <div class="table-wrap" id="request-log" style="max-height:280px;overflow-y:auto">
+    <div style="color:var(--muted);text-align:center;padding:20px;font-size:11px">Monitoring requests...</div>
+  </div>
+</div>
+
+<!-- API Reference -->
+<div class="section fade-in fade-in-6">
+  <div class="section-header"><div class="section-title">API Reference</div></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Endpoint</th><th>Protocol</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">/v1/chat/completions</td><td><span class="tag tag-post">POST</span></td><td style="font-size:11px">OpenAI-compatible chat completions</td></tr>
+        <tr><td class="mono">/v1/messages</td><td><span class="tag tag-post">POST</span></td><td style="font-size:11px">Claude Messages API</td></tr>
+        <tr><td class="mono">/v1/responses</td><td><span class="tag tag-ws">WS</span></td><td style="font-size:11px">OpenAI Responses (streaming + WebSocket)</td></tr>
+        <tr><td class="mono">/v1/models</td><td><span class="tag tag-get">GET</span></td><td style="font-size:11px">List available models</td></tr>
+        <tr><td class="mono">/v1beta/models/:id</td><td><span class="tag tag-post">POST</span></td><td style="font-size:11px">Gemini generate content</td></tr>
+        <tr><td class="mono">/health</td><td><span class="tag tag-get">GET</span></td><td style="font-size:11px">Health check + uptime</td></tr>
+        <tr><td class="mono">/metrics</td><td><span class="tag tag-get">GET</span></td><td style="font-size:11px">Prometheus metrics</td></tr>
+        <tr><td class="mono">/dashboard/</td><td><span class="tag tag-get">GET</span></td><td style="font-size:11px">This dashboard</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</div>
+
+<div class="footer">
+  <strong>LogicaProxy</strong> by <a href="https://github.com/Rovemark">Rovemark</a> &mdash; Open-source multi-provider CLI-to-API proxy
+</div>
+
+<script>
+// State
+let reqHistory = [], errHistory = [], latHistory = [];
+let prevTotal = null, prevErrors = null;
+let requestLog = [];
+let testResults = [];
+let prevEndpoints = [];
+
+// Theme toggle
+const themeBtn = document.getElementById('theme-toggle');
+let darkMode = localStorage.getItem('lp-theme') !== 'light';
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+  themeBtn.innerHTML = darkMode ? '&#9790;' : '&#9728;';
+}
+applyTheme();
+themeBtn.onclick = () => { darkMode = !darkMode; localStorage.setItem('lp-theme', darkMode ? 'dark' : 'light'); applyTheme(); };
+
+// Uptime formatter
+function fmtUptime(str) {
+  if (!str) return '--';
+  const secs = parseFloat(str);
+  if (!isNaN(secs)) {
+    const d = Math.floor(secs / 86400), h = Math.floor((secs % 86400) / 3600), m = Math.floor((secs % 3600) / 60);
+    if (d > 0) return d + 'd ' + h + 'h ' + m + 'm';
+    if (h > 0) return h + 'h ' + m + 'm';
+    return m + 'm ' + Math.floor(secs % 60) + 's';
+  }
+  const p = str.match(/([\d.]+)h|([\d.]+)m(?!s)|([\d.]+)s/g);
+  if (!p) return str.split('.')[0] || '--';
+  let parts = [];
+  for (const s of p) {
+    const v = parseFloat(s);
+    if (s.endsWith('h')) parts.push(Math.floor(v) + 'h');
+    else if (s.endsWith('m') && !s.endsWith('ms')) parts.push(Math.floor(v) + 'm');
+    else if (s.endsWith('s') && parts.length < 2) parts.push(Math.floor(v) + 's');
+  }
+  return parts.join(' ') || '--';
+}
+
+// Sparkline SVG
+function sparklinePath(data, w, h) {
+  if (data.length < 2) return '';
+  const max = Math.max(...data, 1);
+  const step = w / (data.length - 1);
+  return 'M' + data.map((v, i) => `${(i * step).toFixed(1)},${(h - (v / max) * (h - 4) - 2).toFixed(1)}`).join('L');
+}
+function updateSparkline(id, data) {
+  const el = document.querySelector('#' + id + ' path');
+  if (el) el.setAttribute('d', sparklinePath(data.slice(-20), 80, 32));
+}
+
+// Health
+async function fetchHealth() {
+  try {
+    const r = await fetch('/health');
+    const d = await r.json();
+    document.getElementById('version').textContent = 'v' + d.version;
+    document.getElementById('uptime-value').textContent = fmtUptime(d.uptime);
+    document.getElementById('uptime-since').textContent = 'running';
+    document.getElementById('status-text').textContent = 'Online';
+    document.getElementById('status-badge').className = 'badge badge-online';
+    document.getElementById('error-banner').style.display = 'none';
+    document.getElementById('live-dot').style.background = 'var(--green)';
+  } catch {
+    document.getElementById('status-text').textContent = 'Offline';
+    document.getElementById('status-badge').className = 'badge badge-offline';
+    document.getElementById('live-dot').style.background = 'var(--red)';
+    document.getElementById('error-banner').textContent = 'Cannot connect to LogicaProxy';
+    document.getElementById('error-banner').style.display = 'block';
+  }
+}
+
+// Models
+async function fetchModels() {
+  try {
+    const r = await fetch('/v1/models', { headers: { 'x-api-key': 'dashboard' } });
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    const models = d.data || d.models || [];
+    const grid = document.getElementById('models-list');
+    const count = document.getElementById('model-count');
+    if (models.length === 0) {
+      grid.innerHTML = '<span style="color:var(--dim);font-size:11px">No models loaded</span>';
+      count.textContent = '0 models';
+      return;
+    }
+    const names = models.map(m => m.id || m.name || m).slice(0, 30);
+    grid.innerHTML = names.map(n => `<span class="model-tag">${n}</span>`).join('');
+    count.textContent = models.length + ' models';
+  } catch {
+    document.getElementById('models-list').innerHTML = '<span style="color:var(--dim);font-size:11px">Auth required to list models</span>';
+    document.getElementById('model-count').textContent = '--';
+  }
+}
+
+// Metrics
+async function fetchMetrics() {
+  try {
+    const r = await fetch('/metrics');
+    const text = await r.text();
+    const lines = text.split('\n').filter(l => l && !l.startsWith('#'));
+    let total = 0, errors = 0;
+    const endpoints = [];
+
+    for (const line of lines) {
+      const sp = line.lastIndexOf(' ');
+      const metric = line.substring(0, sp), value = line.substring(sp + 1);
+      if (metric === 'logicaproxy_requests_total') total = parseInt(value);
+      if (metric === 'logicaproxy_errors_total') errors = parseInt(value);
+      if (metric.startsWith('logicaproxy_endpoint_requests_total')) {
+        const m = metric.match(/method="([^"]+)",path="([^"]+)"/);
+        if (m) endpoints.push({ method: m[1], path: m[2], requests: parseInt(value), errors: 0, latency: 0 });
+      }
+      if (metric.startsWith('logicaproxy_endpoint_errors_total')) {
+        const m = metric.match(/method="([^"]+)",path="([^"]+)"/);
+        if (m) { const ep = endpoints.find(e => e.method === m[1] && e.path === m[2]); if (ep) ep.errors = parseInt(value); }
+      }
+      if (metric.startsWith('logicaproxy_endpoint_avg_latency_ms')) {
+        const m = metric.match(/method="([^"]+)",path="([^"]+)"/);
+        if (m) { const ep = endpoints.find(e => e.method === m[1] && e.path === m[2]); if (ep) ep.latency = parseInt(value); }
+      }
+    }
+
+    // Stats
+    document.getElementById('total-requests').textContent = total.toLocaleString();
+    const rate = total > 0 ? ((errors / total) * 100).toFixed(1) : '0.0';
+    document.getElementById('error-rate').textContent = rate + '%';
+    document.getElementById('total-errors').textContent = errors + ' errors';
+
+    const withLat = endpoints.filter(e => e.latency > 0);
+    const avgLat = withLat.length > 0 ? Math.round(withLat.reduce((a, e) => a + e.latency, 0) / withLat.length) : 0;
+    document.getElementById('avg-latency').textContent = avgLat > 0 ? avgLat + 'ms' : '--';
+
+    // Req/s
+    if (prevTotal !== null) {
+      const delta = total - prevTotal;
+      const rps = (delta / 5).toFixed(1);
+      document.getElementById('req-rate').textContent = rps + ' req/s';
+    }
+
+    // Histories for sparklines
+    reqHistory.push(total - (prevTotal || total));
+    errHistory.push(errors - (prevErrors || errors));
+    latHistory.push(avgLat);
+    if (reqHistory.length > 20) reqHistory = reqHistory.slice(-20);
+    if (errHistory.length > 20) errHistory = errHistory.slice(-20);
+    if (latHistory.length > 20) latHistory = latHistory.slice(-20);
+    updateSparkline('spark-reqs', reqHistory);
+    updateSparkline('spark-errors', errHistory);
+    updateSparkline('spark-latency', latHistory);
+
+    prevTotal = total;
+    prevErrors = errors;
+
+    // Chart
+    updateChart();
+
+    // Detect new requests for log
+    endpoints.forEach(ep => {
+      const prev = prevEndpoints.find(p => p.method === ep.method && p.path === ep.path);
+      const prevReqs = prev ? prev.requests : 0;
+      if (ep.requests > prevReqs) {
+        for (let i = 0; i < ep.requests - prevReqs; i++) {
+          requestLog.unshift({
+            time: new Date().toLocaleTimeString('en', { hour12: false }),
+            method: ep.method,
+            path: ep.path,
+            latency: ep.latency,
+            status: ep.errors > (prev?.errors || 0) ? 'err' : 'ok'
+          });
+        }
+      }
+    });
+    prevEndpoints = endpoints.map(e => ({ ...e }));
+    if (requestLog.length > 10) requestLog = requestLog.slice(0, 10);
+    updateRequestLog();
+
+    // Endpoints table
+    const tbody = document.getElementById('endpoints-body');
+    if (endpoints.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px;font-size:11px">Waiting for requests...</td></tr>';
+    } else {
+      endpoints.sort((a, b) => b.requests - a.requests);
+      tbody.innerHTML = endpoints.map(ep => {
+        const mc = ep.method === 'POST' ? 'tag-post' : 'tag-get';
+        return `<tr><td><span class="tag ${mc}">${ep.method}</span></td><td class="mono">${ep.path}</td><td style="text-align:right">${ep.requests.toLocaleString()}</td><td style="text-align:right">${ep.errors > 0 ? '<span class="tag tag-error">' + ep.errors + '</span>' : '<span style="color:var(--dim)">0</span>'}</td><td style="text-align:right;font-family:monospace;font-size:11px">${ep.latency}ms</td></tr>`;
+      }).join('');
+    }
+  } catch {}
+}
+
+// Chart
+let chartTotals = [];
+function updateChart() {
+  chartTotals.push(prevTotal || 0);
+  if (chartTotals.length > 31) chartTotals = chartTotals.slice(-31);
+  const chart = document.getElementById('chart');
+  if (chartTotals.length < 2) { chart.innerHTML = '<div style="color:var(--dim);font-size:11px;margin:auto">Collecting...</div>'; return; }
+  const deltas = [];
+  for (let i = 1; i < chartTotals.length; i++) deltas.push(chartTotals[i] - chartTotals[i - 1]);
+  const max = Math.max(...deltas, 1);
+  const now = new Date();
+  chart.innerHTML = deltas.map((d, i) => {
+    const h = Math.max(3, (d / max) * 140);
+    const t = new Date(now - (deltas.length - 1 - i) * 5000);
+    const ts = t.toLocaleTimeString('en', { hour12: false });
+    const color = d === 0 ? 'var(--dim)' : 'var(--accent)';
+    const op = i === deltas.length - 1 ? '1' : '0.55';
+    return `<div class="chart-bar" style="height:${h}px;background:${color};opacity:${op}"><div class="chart-tooltip">${d} req @ ${ts}</div></div>`;
+  }).join('');
+}
+
+// Request Log
+function updateRequestLog() {
+  const el = document.getElementById('request-log');
+  if (requestLog.length === 0) { el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px;font-size:11px">Monitoring requests...</div>'; return; }
+  el.innerHTML = requestLog.map(r => {
+    const mc = r.method === 'POST' ? 'tag-post' : 'tag-get';
+    return `<div class="log-entry"><span class="log-time">${r.time}</span><span class="log-method"><span class="tag ${mc}">${r.method}</span></span><span class="log-path">${r.path}</span><span class="log-latency">${r.latency}ms</span><span class="log-status ${r.status}">${r.status === 'ok' ? '200' : 'ERR'}</span></div>`;
+  }).join('');
+}
+
+// Connection Test
+const testBtn = document.getElementById('test-btn');
+testBtn.onclick = async () => {
+  testBtn.disabled = true; testBtn.textContent = 'Testing...';
+  const start = performance.now();
+  try {
+    await fetch('/health');
+    const ms = Math.round(performance.now() - start);
+    testResults.unshift(ms);
+    if (testResults.length > 5) testResults = testResults.slice(0, 5);
+    document.getElementById('test-result').innerHTML = `<span style="color:var(--green);font-weight:700">${ms}ms</span> round-trip`;
+    document.getElementById('test-history').textContent = testResults.length > 1 ? 'History: ' + testResults.map(t => t + 'ms').join(', ') : '';
+  } catch {
+    document.getElementById('test-result').innerHTML = '<span style="color:var(--red)">Failed</span>';
+  }
+  testBtn.disabled = false; testBtn.textContent = 'Test Latency';
+};
+
+// Init
+fetchHealth();
+fetchMetrics();
+fetchModels();
+setInterval(fetchHealth, 5000);
+setInterval(fetchMetrics, 5000);
+setInterval(fetchModels, 30000);
+</script>
+</body>
+</html>

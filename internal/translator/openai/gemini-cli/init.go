@@ -1,0 +1,20 @@
+package geminiCLI
+
+import (
+	. "github.com/Rovemark/LogicaProxy/v6/internal/constant"
+	"github.com/Rovemark/LogicaProxy/v6/internal/interfaces"
+	"github.com/Rovemark/LogicaProxy/v6/internal/translator/translator"
+)
+
+func init() {
+	translator.Register(
+		GeminiCLI,
+		OpenAI,
+		ConvertGeminiCLIRequestToOpenAI,
+		interfaces.TranslateResponse{
+			Stream:     ConvertOpenAIResponseToGeminiCLI,
+			NonStream:  ConvertOpenAIResponseToGeminiCLINonStream,
+			TokenCount: GeminiCLITokenCount,
+		},
+	)
+}
