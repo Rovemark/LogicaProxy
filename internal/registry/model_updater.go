@@ -352,7 +352,10 @@ func validateModelsCatalog(data *staticModelsJSON) error {
 
 func validateModelSection(section string, models []*ModelInfo) error {
 	if len(models) == 0 {
-		return fmt.Errorf("%s section is empty", section)
+		// Secao vazia e VALIDA: provider sem modelos no catalogo upstream (ex: qwen/iflow
+		// removidos) nao pode invalidar o catalogo inteiro e descartar modelos Claude novos
+		// (ex: opus-4-8). Os checks por-modelo abaixo so rodam no que existir.
+		return nil
 	}
 
 	seen := make(map[string]struct{}, len(models))
